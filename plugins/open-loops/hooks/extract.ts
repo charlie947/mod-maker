@@ -10,6 +10,13 @@ const ASK_ANYWHERE = /\b(make sure|please|can you|could you|can we|need you to|w
 const NOT_AN_ASK =
   /^(go|send|yes|no|ok|okay|done|great|perfect|eta\??|allow|connected|open|in|sure|yep|nice|amazing|how'?s it going\??)[.!? ]*$/i
 
+// Rules and limits ("Do not read files outside this folder", "Preserve .env", "Work only in X")
+// shape how the work is done. They are not tasks to finish, so they are not loops.
+// "Don't forget to send…" is still an ask.
+const CONSTRAINT =
+  /^(do not|don'?t|never|avoid|no |not |without |stay |work only|preserve|leave .+ (alone|as is|untouched)|keep .+ (unchanged|intact|as is|private))/i
+const STILL_AN_ASK = /^(do not|don'?t|never) forget\b/i
+
 const MAX_PROMPT = 4000 // longer prompts are pasted transcripts or scheduled jobs
 const MAX_ASKS = 8
 
@@ -36,7 +43,8 @@ export function extractAsks(raw: string): string[] {
     if (NOT_AN_ASK.test(s)) continue
     // "And send me…", "Also add…": the joining word hides the verb, so test without it.
     const bare = s.replace(/^(and|also|then|plus|so|oh and|and also)[, ]+/i, '')
-    if (listed || s.endsWith('?') || ASK_START.test(bare) || ASK_ANYWHERE.test(s)) asks.push(s)
+    if (CONSTRAINT.test(bare) && !STILL_AN_ASK.test(bare)) continue
+    if (listed || s.endsWith('?') || STILL_AN_ASK.test(bare) || ASK_START.test(bare) || ASK_ANYWHERE.test(s)) asks.push(s)
     if (asks.length >= MAX_ASKS) break
   }
   return asks

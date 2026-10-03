@@ -117,6 +117,22 @@ export const register: Register = on => {
     return { text }
   })
 
+  // Claude may end a turn with the work done but the asks never closed. Before it stops,
+  // name the asks from the latest prompt that are still open, once, so it closes each with
+  // proof or drops it with a reason. stop_hook_active is true on the retry, so it never loops.
+  on('classic.Stop', async ($, e: any, next) => {
+    if (e.stop_hook_active) return next(e)
+    const ids = new Set(await read($, heard))
+    const left = openOf(await read($, loops)).filter(l => ids.has(l.id))
+    if (left.length === 0) return next(e)
+    return {
+      block:
+        `open-loops: these asks from the user's last prompt are still open: ${left.map(l => `L${l.id} "${short(l.text, 70)}"`).join('; ')}. ` +
+        'For each one that is finished, call mcp__open-loops__close_loop with its id and the proof (load it with ToolSearch first if it is deferred). ' +
+        'If one is not finished, say so to the user. If one is not a real ask, call mcp__open-loops__drop_loop with the reason.',
+    }
+  })
+
   on('prompt.submit', async ($, e, next) => {
     await setup($)
     const added = await addLoops($, extractAsks(e.text))
