@@ -73,6 +73,12 @@
       "source": "./plugins/plain-reply",
       "description": "Grades every reply for length, long sentences and jargon, and offers a one-click 'Say it simpler' draft when it goes over your bar",
       "version": "0.1.0"
+    },
+    {
+      "name": "outbox",
+      "source": "./plugins/outbox",
+      "description": "Holds every message Claude tries to send (WhatsApp, email, Slack) until you read it, see who it goes to, and press Send",
+      "version": "0.1.0"
     }
   ]
 }
