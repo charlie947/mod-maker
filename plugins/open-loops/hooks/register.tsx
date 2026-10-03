@@ -7,6 +7,8 @@ import { extractAsks } from './extract'
 const PANE = 'open-loops'
 const loops = atom({ plugin: 'open-loops', key: 'loops' } as const, [])
 const nextId = atom({ plugin: 'open-loops', key: 'nextId' } as const, 1)
+// Ask-splitter: the loop ids caught from the latest prompt, shown above the prompt box.
+const heard = atom({ plugin: 'open-loops', key: 'heard' } as const, [])
 
 const short = (s: string, n = 90) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 const openOf = (list: readonly Loop[]) => list.filter(l => l.status === 'open')
@@ -118,6 +120,8 @@ export const register: Register = on => {
   on('prompt.submit', async ($, e, next) => {
     await setup($)
     const added = await addLoops($, extractAsks(e.text))
+    // A prompt with no asks (a "go", a pasted note) keeps the last list on screen.
+    if (added.length) await update($, heard, () => added.map(l => l.id))
     const open = openOf(await read($, loops))
     await refreshStatus($)
     if (open.length === 0 && added.length === 0) return next(e)
@@ -191,6 +195,35 @@ export const register: Register = on => {
             {l.proof ? ` (${short(l.proof, 40)})` : ''}
           </Text>
         ))}
+      </Box>
+    )
+  })
+
+  // Ask-splitter band: "I heard 3 asks", numbered, each ticking as its proof arrives.
+  // It draws above whatever the plugins beneath draw, so no other band is hidden.
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const ids = await read($, heard)
+    const list = (await read($, loops)).filter(l => ids.includes(l.id))
+    const below = await next(e)
+    if ((e.props as any).hasSurvey || list.length === 0) return below
+    const { Box, Text } = $.ui.resolve(e)
+    const accent = '#D97557'
+    const width = Math.max(40, Math.min(100, (e.props as any).bodyColumns ?? 80))
+    const done = list.filter(l => l.status === 'done').length
+    const mark = (l: Loop) => (l.status === 'done' ? '✓' : l.status === 'dropped' ? '✗' : '○')
+    return (
+      <Box flexDirection="column">
+        <Text>
+          <Text bold color={accent}>{`◆ I heard ${list.length} ask${list.length === 1 ? '' : 's'}`}</Text>
+          <Text dimColor>{`   ${done} of ${list.length} done · each one ticks only with proof · /loops`}</Text>
+        </Text>
+        {list.map((l, i) => (
+          <Text key={`h${l.id}`} color={l.status === 'done' ? 'green' : undefined} dimColor={l.status === 'dropped'}>
+            {`  ${i + 1}. ${mark(l)} ${short(l.text, width - (l.status === 'done' && l.proof ? 34 : 8))}`}
+            {l.status === 'done' && l.proof ? <Text dimColor>{`  (${short(l.proof, 24)})`}</Text> : null}
+          </Text>
+        ))}
+        {below}
       </Box>
     )
   })

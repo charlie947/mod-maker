@@ -2,7 +2,7 @@
 // through add_loop, so this only has to catch the obvious ones.
 
 const ASK_START =
-  /^(please |pls |can you|could you|can we|could we|will you|would you|make sure|let'?s |send|show|add|fix|build|put|push|check|update|tell|bring|give|get|load|schedule|delete|remove|clean|create|make|draft|write|reply|post|publish|upload|share|run|render|go ahead|do |finalise|finish|save|bank|review|qa|analyse|research|look (at|into)|find|move|set up|book|fill|count|list|compare|explain|summari[sz]e|rename|test|try|turn|change|convert|translate|need you|i need you|i want you|we need to)/i
+  /^(please |pls |can you|could you|can we|could we|will you|would you|make sure|let'?s |send|show|add|fix|build|put|push|check|update|tell|bring|give|get|load|schedule|delete|remove|clean|create|make|draft|write|reply|post|publish|upload|share|run|render|go ahead|do |finalise|finish|save|bank|review|qa|analyse|research|look (at|into)|find|move|set up|book|fill|count|list|compare|explain|summari[sz]e|rename|test|try|turn|change|convert|translate|shorten|cut|trim|tidy|rewrite|redo|swap|replace|include|keep|drop|pull|grab|open|record|edit|polish|merge|split|rerun|re-run|retry|resend|confirm|verify|measure|use|need you|i need you|i want you|we need to)/i
 
 const ASK_ANYWHERE = /\b(make sure|please|can you|could you|can we|need you to|want you to)\b/i
 
@@ -34,7 +34,9 @@ export function extractAsks(raw: string): string[] {
   for (const { s, listed } of sentences) {
     if (s.length < 6 || s.length > 300) continue
     if (NOT_AN_ASK.test(s)) continue
-    if (listed || s.endsWith('?') || ASK_START.test(s) || ASK_ANYWHERE.test(s)) asks.push(s)
+    // "And send me…", "Also add…": the joining word hides the verb, so test without it.
+    const bare = s.replace(/^(and|also|then|plus|so|oh and|and also)[, ]+/i, '')
+    if (listed || s.endsWith('?') || ASK_START.test(bare) || ASK_ANYWHERE.test(s)) asks.push(s)
     if (asks.length >= MAX_ASKS) break
   }
   return asks

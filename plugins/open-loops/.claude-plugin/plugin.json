@@ -1,7 +1,7 @@
 {
   "name": "open-loops",
-  "version": "0.1.1",
-  "description": "Live pane of every ask you make in a session, ticked only with proof",
+  "version": "0.1.2",
+  "description": "Live pane of every ask you make in a session, ticked only with proof. Ask-splitter: right after you send a prompt, a band shows \"I heard 3 asks\" and numbers each one",
   "types": "./types/index.d.ts",
   "author": {
     "name": "Charlie Hills"

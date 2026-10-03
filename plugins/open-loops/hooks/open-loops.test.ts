@@ -15,6 +15,15 @@ test('extract: real multi-ask prompt gives each ask', () => {
   ])
 })
 
+test('ask-splitter: a three-ask prompt gives three asks, even after "And"', () => {
+  expect(extractAsks('Shorten the intro to three lines. Can you add the pricing table under it? And send me the preview link when it is done.')).toEqual([
+    'Shorten the intro to three lines.',
+    'Can you add the pricing table under it?',
+    'And send me the preview link when it is done.',
+  ])
+  expect(extractAsks('So that is it.')).toEqual([])
+})
+
 test('extract: bare approvals are not asks', () => {
   for (const p of ['Go', 'Send', 'ETA?', 'yes', 'Done!', 'Allow']) expect(extractAsks(p)).toEqual([])
 })
