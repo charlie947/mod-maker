@@ -120,6 +120,10 @@ export const register: Register = on => {
 
   on('prompt.submit', async ($, e, next) => {
     await setup($)
+    // A new prompt after a finished plan is a new task: the old plan leaves the panel.
+    // An unfinished plan stays, because "go on" or a correction continues the same task.
+    const before = await read($, mission)
+    if (before.steps.length && before.steps.every(st => st.status === 'done')) await set($, () => ({ steps: [] }))
     const typed = (e as any).origin?.kind === 'composer'
     const texts = typed ? extractAsks(e.text) : []
     if (texts.length) await addAsks($, texts)
