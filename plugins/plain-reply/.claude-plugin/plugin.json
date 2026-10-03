@@ -1,0 +1,12 @@
+{
+  "name": "plain-reply",
+  "version": "0.1.0",
+  "description": "Grades every reply for length, long sentences and jargon, and offers a one-click 'Say it simpler' draft when it goes over your bar",
+  "author": { "name": "Charlie Hills" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "maxWords": { "type": "number", "title": "Most words in a reply", "description": "Replies longer than this get the Say it simpler button", "default": 150 },
+    "maxSentence": { "type": "number", "title": "Longest sentence (words)", "description": "A sentence longer than this counts as too long", "default": 20 },
+    "maxJargon": { "type": "number", "title": "Jargon words allowed", "description": "This many jargon words or more gets the button", "default": 3 }
+  }
+}
