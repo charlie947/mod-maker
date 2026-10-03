@@ -3,6 +3,7 @@ import type { Register } from 'claude-code'
 
 import type { Loop } from '../types'
 import { extractAsks } from './extract'
+import { shortPaths } from './paths'
 
 const PANE = 'open-loops'
 const loops = atom({ plugin: 'open-loops', key: 'loops' } as const, [])
@@ -10,6 +11,9 @@ const nextId = atom({ plugin: 'open-loops', key: 'nextId' } as const, 1)
 // Ask-splitter: the loop ids caught from the latest prompt, shown above the prompt box.
 const heard = atom({ plugin: 'open-loops', key: 'heard' } as const, [])
 
+let home = ''
+let cwd: string | undefined
+const plain = (s: string) => shortPaths(s, home, cwd)
 const short = (s: string, n = 90) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 const openOf = (list: readonly Loop[]) => list.filter(l => l.status === 'open')
 
@@ -17,7 +21,7 @@ async function addLoops($: any, texts: string[]): Promise<Loop[]> {
   if (texts.length === 0) return []
   const first = await read($, nextId)
   await update($, nextId, n => (n ?? 1) + texts.length)
-  const added = texts.map((text, i) => ({ id: first + i, text, status: 'open' as const }))
+  const added = texts.map((text, i) => ({ id: first + i, text: plain(text), status: 'open' as const }))
   await update($, loops, list => [...(list ?? []), ...added])
   return added
 }
@@ -28,7 +32,7 @@ async function setStatus($: any, id: number, status: Loop['status'], proof: stri
     (list ?? []).map(l => {
       if (l.id !== id) return l
       found = true
-      return { ...l, status, proof }
+      return { ...l, status, proof: plain(proof) }
     }),
   )
   return found
@@ -67,6 +71,8 @@ function setup($: any): Promise<void> {
   return ready
 }
 async function doSetup($: any) {
+  home = (await $.env.get('HOME').catch(() => undefined)) ?? home
+  cwd = (await $.session.cwd().catch(() => undefined)) ?? cwd
   await $.command.register({ name: 'loops', description: 'Show every ask from this session and what is still open' })
   await $.tool.register({
     name: 'close_loop',
@@ -145,6 +151,7 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: 'mcp__open-loops__close_loop' }, async ($, e: any) => {
+    await setup($)
     const id = Number(e.id)
     const proof = String(e.proof ?? '').trim()
     if (!proof) return { result: `L${id} not closed: proof is required.` }

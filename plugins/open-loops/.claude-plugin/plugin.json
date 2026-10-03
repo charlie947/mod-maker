@@ -1,6 +1,6 @@
 {
   "name": "open-loops",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Live pane of every ask you make in a session, ticked only with proof. Ask-splitter: right after you send a prompt, a band shows \"I heard 3 asks\" and numbers each one",
   "types": "./types/index.d.ts",
   "author": {
