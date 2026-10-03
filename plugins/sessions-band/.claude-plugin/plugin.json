@@ -1,6 +1,6 @@
 {
   "name": "sessions-band",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A band above the prompt listing your other open Claude Code sessions, what each one is for, and an Ask button",
   "types": "./types/index.d.ts",
   "author": {
