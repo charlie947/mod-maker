@@ -1,0 +1,1 @@
+{ "name": "show-it", "version": "0.1.0", "description": "Opens the newest page, image or video Claude made at the end of each turn, without stealing focus", "types": "./types/index.d.ts", "author": { "name": "Charlie Hills" } }

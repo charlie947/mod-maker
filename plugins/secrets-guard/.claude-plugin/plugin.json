@@ -1,0 +1,1 @@
+{ "name": "secrets-guard", "version": "0.1.0", "description": "Stops Claude reading .env and key files, and masks API keys in command output", "author": { "name": "Charlie Hills" } }

@@ -1,0 +1,9 @@
+{
+  "name": "open-loops",
+  "version": "0.1.0",
+  "description": "Live pane of every ask you make in a session, ticked only with proof",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Charlie Hills"
+  }
+}
