@@ -46,6 +46,7 @@ export const register: Register = on => {
   })
 
   on('turn.complete', async ($, e, next) => {
+    if (e.agentId) return next(e) // a subagent finishing is not the main turn ending
     working = false
     timer?.cancel()
     timer = undefined
@@ -114,6 +115,8 @@ export const register: Register = on => {
     const left = ` ◆ ${BRAND.name} `
     const right = facts.length ? ` ${facts.join('  ·  ')} ` : ''
     const gap = Math.max(1, width - left.length - right.length - (m ? 12 : 0))
+    // Other mods share this band: draw theirs under ours, never instead of it.
+    const theirs = await next(e)
     return (
       <Box flexDirection="column">
         <Text backgroundColor={BRAND.card} wrap="truncate-end">
@@ -123,6 +126,7 @@ export const register: Register = on => {
           {m ? <Text color={BRAND.signal} backgroundColor={BRAND.card}>{m.full}</Text> : ''}
           {m ? <Text color={BRAND.line} backgroundColor={BRAND.card}>{`${m.empty}  `}</Text> : ''}
         </Text>
+        {theirs ?? ''}
       </Box>
     )
   })

@@ -1,5 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
+import { register } from './register'
 import { BRAND, bandFacts, elapsed, frame, meter, summary } from './theme'
 
 // Stands in for Claude Code beneath the mod: a clock, and the engine's own drawing as one line.
@@ -112,4 +113,33 @@ test('the question dialog keeps the engine dialog whole, with the header above i
   } as any)
   expect((await ui.find({ type: 'Text', text: /^◆ YOUR CALL$/ }))?.props.color).toBe(BRAND.signal)
   await ui.unmount()
+})
+
+test('the band keeps what other mods draw in it, under the brand line', async ($, on) => {
+  engine(on)
+  const ui = await $.ui.mount({
+    plugin: 'brand-theme', surface: 'terminal', component: 'AbovePrompt',
+    props: { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 80 },
+  } as any)
+  expect(await ui.find({ type: 'Text', text: new RegExp(`^ ◆ ${BRAND.name} $`) })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /ENGINE DRAWING/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('a subagent finishing does not stop the main spinner', async () => {
+  // Calls the hooks directly with a stand-in $, so the timer's cancel can be watched.
+  const hooks: Record<string, any> = {}
+  register(((name: string, ...args: any[]) => { hooks[name] = args.at(-1) }) as any, {} as any)
+  let cancelled = 0
+  const fake: any = {
+    clock: { now: async () => 1000, every: () => ({ cancel: () => { cancelled++ } }) },
+    state: { get: async () => ({ value: 0, version: 1 }), set: async () => ({ isSet: true, version: 2 }) },
+    session: { usage: async () => ({}) },
+  }
+  const next = async (e: any) => e
+  await hooks['turn.start'](fake, { turnId: 'main' }, next)
+  await hooks['turn.complete'](fake, { turnId: 'child', agentId: 'a1' }, next)
+  expect(cancelled).toBe(0)
+  await hooks['turn.complete'](fake, { turnId: 'main' }, next)
+  expect(cancelled).toBe(1)
 })
