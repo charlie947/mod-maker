@@ -1,0 +1,1 @@
+{ "name": "outbox", "version": "0.1.0", "description": "Holds every message Claude tries to send (WhatsApp, email, Slack) until you read it, see who it goes to, and press Send", "author": { "name": "Charlie Hills" }, "types": "./types/index.d.ts" }
