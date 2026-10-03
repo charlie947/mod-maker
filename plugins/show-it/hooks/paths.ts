@@ -25,3 +25,18 @@ export function visualPathsIn(text: string, home: string, cwd?: string): string[
   }
   return out
 }
+
+// The path as the user should see it on screen: relative inside the project, ~ inside home,
+// and only the file name anywhere else. The full path never reaches the chat.
+export function displayPath(p: string, home: string, cwd?: string): string {
+  const dir = (d?: string) => (d ? d.replace(/\/$/, '') + '/' : '')
+  if (cwd && p.startsWith(dir(cwd))) return p.slice(dir(cwd).length)
+  if (home && p.startsWith(dir(home))) return `~/${p.slice(dir(home).length)}`
+  return p.split('/').pop() ?? p
+}
+
+// What /show says in the chat.
+export function showReply(ok: boolean, path: string, home: string, cwd?: string): string {
+  const p = displayPath(path, home, cwd)
+  return ok ? `Brought to the front: ${p}` : `Could not open ${p}`
+}

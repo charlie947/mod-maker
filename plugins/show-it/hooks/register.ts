@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import { isVisual, visualPathsIn } from './paths'
+import { displayPath, isVisual, showReply, visualPathsIn } from './paths'
 
 // Opens the newest visual a turn made (a page, image, video or PDF) in its usual app,
 // without stealing focus. macOS uses `open -g`, Linux uses `xdg-open`.
@@ -13,6 +13,8 @@ const lastShown = atom({ plugin: 'show-it', key: 'lastShown' } as const, null)
 const name = (p: string) => p.split('/').pop() ?? p
 
 let home = ''
+let cwd: string | undefined
+const shown = (p: string) => displayPath(p, home, cwd)
 let turnStart = 0 // module values: a reload resets them, which is harmless here
 
 let os = ''
@@ -43,6 +45,7 @@ function setup($: any): Promise<void> {
 }
 async function doSetup($: any) {
   home = (await $.env.get('HOME')) ?? home
+  cwd = (await $.session.cwd().catch(() => undefined)) ?? cwd
   os = (await $.process.run(['uname', '-s']).catch(() => null))?.stdout.trim() ?? ''
   await $.command.register({ name: 'show', description: 'Bring the last page, image or video Claude made to the front' })
 }
@@ -83,7 +86,7 @@ export const register: Register = on => {
         $.ui.toast(`Opened ${name(newest)}. Type /show to bring it to the front.`)
         $.ui.status(`Last shown: ${name(newest)}`)
       } else {
-        $.ui.toast(`Could not open ${newest}`)
+        $.ui.toast(`Could not open ${shown(newest)}`)
       }
     }
     return next(e)
@@ -94,6 +97,6 @@ export const register: Register = on => {
     const last = await read($, lastShown)
     if (!last) return { text: 'Nothing shown yet in this session.' }
     const ok = await show($, last.path, true)
-    return { text: ok ? `Brought to the front: ${last.path}` : `Could not open ${last.path}` }
+    return { text: showReply(ok, last.path, home, cwd) }
   })
 }

@@ -48,7 +48,7 @@
       "name": "show-it",
       "source": "./plugins/show-it",
       "description": "Opens the newest page, image or video Claude made, without stealing focus",
-      "version": "0.1.1"
+      "version": "0.1.2"
     },
     {
       "name": "sessions-band",
