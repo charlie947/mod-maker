@@ -1,6 +1,6 @@
 import type { Register } from 'claude-code'
 
-import { classify, moveToBin, preview, resolvePaths, undo } from './core'
+import { classify, moveToBin, preview, resolvePaths, shortPath, undo } from './core'
 import type { Receipt, Run } from './core'
 
 // Claude never deletes a file for good. A delete Claude runs (rm, rm -r, rm -rf, unlink,
@@ -75,7 +75,7 @@ export const register: Register = on => {
     const run = runner($)
     const { paths, missing } = await resolvePaths(plan, cwd, home, run)
     if (missing.length) {
-      return { deny: `safe-delete stopped this: ${missing.join(', ')} not found from ${cwd}. Run it again with full paths (starting with /). Nothing was deleted.` }
+      return { deny: `safe-delete stopped this: ${missing.join(', ')} not found from ${shortPath(cwd, home) || cwd}. Run it again with full paths (starting with /). Nothing was deleted.` }
     }
     if (!paths.length) return { deny: 'safe-delete: nothing matched, so nothing was moved or deleted.' }
 
@@ -87,19 +87,22 @@ export const register: Register = on => {
     await writeReceipts($, list.slice(-200))
     $.ui.toast(`Moved ${items.length} item(s) to the Bin. /undo-delete puts them back.`)
     return {
-      deny: `safe-delete moved ${preview(items)}\nto the Bin instead of deleting them. Receipt: ${receipts}. The user can type /undo-delete to put them back. Treat the delete as done.`,
+      deny: `safe-delete moved ${preview(items, home, cwd)}\nto the Bin instead of deleting them. Receipt: ${shortPath(receipts, home)}. The user can type /undo-delete to put them back. Treat the delete as done.`,
     }
   })
 
   on('command.run', { command: 'undo-delete' }, async $ => {
+    await setup($)
+    const cwd = await $.session.cwd().catch(() => undefined)
+    const at = (p: string) => shortPath(p, home, cwd)
     const list = await readReceipts($)
     const last = [...list].reverse().find(r => !r.undone)
     if (!last) return { text: 'Nothing to undo: no batch is waiting in the receipts.' }
     const { back, skipped } = await undo(last, runner($))
     last.undone = true
     await writeReceipts($, list)
-    const lines = [`Put back ${back.length} item(s) from ${last.at}:`, ...back.slice(0, 10).map(i => `  ${i.from}`)]
-    if (skipped.length) lines.push(`Left in the Bin (something already at that path): ${skipped.map(i => i.from).join(', ')}`)
+    const lines = [`Put back ${back.length} item(s) from ${last.at}:`, ...back.slice(0, 10).map(i => `  ${at(i.from)}`)]
+    if (skipped.length) lines.push(`Left in the Bin (something already at that path): ${skipped.map(i => at(i.from)).join(', ')}`)
     return { text: lines.join('\n') }
   })
 }

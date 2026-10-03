@@ -141,7 +141,17 @@ export async function undo(receipt: Receipt, run: Run): Promise<{ back: Item[]; 
   return { back, skipped }
 }
 
-export function preview(items: Item[]): string {
-  const first = items.slice(0, 10).map(i => `  ${i.from}`).join('\n')
+// A path as the user should see it on screen: relative inside the session folder, ~/ inside
+// home. A full /Users/<name> path never reaches the chat.
+export function shortPath(p: string, home: string, cwd?: string): string {
+  const dir = (d: string) => d.replace(/\/+$/, '') + '/'
+  if (cwd && p.startsWith(dir(cwd))) return p.slice(dir(cwd).length)
+  if (cwd && p === cwd.replace(/\/+$/, '')) return '.'
+  if (home && p.startsWith(dir(home))) return `~/${p.slice(dir(home).length)}`
+  return p.replace(/^\/(Users|home)\/[^/]+\//, '~/')
+}
+
+export function preview(items: Item[], home = '', cwd?: string): string {
+  const first = items.slice(0, 10).map(i => `  ${shortPath(i.from, home, cwd)}`).join('\n')
   return `${items.length} item(s)${items.length > 10 ? ', first 10' : ''}:\n${first}`
 }

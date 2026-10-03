@@ -1,1 +1,1 @@
-{ "name": "safe-delete", "version": "0.1.1", "description": "Claude never deletes a file for good: rm, find -delete and git clean move files to the Bin, with a receipt and /undo-delete", "author": { "name": "Charlie Hills" } }
+{ "name": "safe-delete", "version": "0.1.2", "description": "Claude never deletes a file for good: rm, find -delete and git clean move files to the Bin, with a receipt and /undo-delete", "author": { "name": "Charlie Hills" } }
