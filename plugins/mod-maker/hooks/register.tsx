@@ -38,20 +38,36 @@ async function checkMod($: any, dir: string): Promise<string> {
   return [`Safety check for ${path}`, ...explain(`${v.stdout}\n${v.stderr}`, sources).lines].join('\n')
 }
 
+// Setup runs once: at session start or, after /reload-plugins (which does not fire
+// session.start), on the first prompt or tool call.
+let ready: Promise<void> | undefined
+function setup($: any): Promise<void> {
+  ready ??= doSetup($).catch(() => undefined) // a missing engine call must not stop the hooks
+  return ready
+}
+async function doSetup($: any) {
+  home = (await $.env.get('HOME')) ?? ''
+  const n = Number(await $.env.get('MOD_AUDIT_SESSIONS'))
+  if (n > 0) sessionsToRead = n
+  historyPath = (await $.env.get('MOD_AUDIT_HISTORY')) ?? `${home}/.claude/history.jsonl`
+  await $.command.register({ name: 'mod-audit', description: 'Rank what you ask Claude again and again, from your last 30 sessions' })
+  await $.command.register({ name: 'mod-build', description: 'Build a mod for one habit from /mod-audit, e.g. /mod-build 2' })
+  await $.command.register({ name: 'mod-check', description: 'Say in plain English what a mod can read, run and send, e.g. /mod-check ./my-mod' })
+  await $.tool.register({
+    name: 'check_mod',
+    description: 'Safety check for a mod folder: runs claude plugin validate and returns, in plain English, what the mod can read, run and send. Show the result to the user.',
+    inputSchema: { type: 'object', properties: { folder: { type: 'string' } }, required: ['folder'] },
+  })
+}
+
 export const register: Register = on => {
+  on('tool.call', async ($, e, next) => {
+    await setup($)
+    return next(e)
+  })
+
   on('session.start', async ($, e, next) => {
-    home = (await $.env.get('HOME')) ?? ''
-    const n = Number(await $.env.get('MOD_AUDIT_SESSIONS'))
-    if (n > 0) sessionsToRead = n
-    historyPath = (await $.env.get('MOD_AUDIT_HISTORY')) ?? `${home}/.claude/history.jsonl`
-    await $.command.register({ name: 'mod-audit', description: 'Rank what you ask Claude again and again, from your last 30 sessions' })
-    await $.command.register({ name: 'mod-build', description: 'Build a mod for one habit from /mod-audit, e.g. /mod-build 2' })
-    await $.command.register({ name: 'mod-check', description: 'Say in plain English what a mod can read, run and send, e.g. /mod-check ./my-mod' })
-    await $.tool.register({
-      name: 'check_mod',
-      description: 'Safety check for a mod folder: runs claude plugin validate and returns, in plain English, what the mod can read, run and send. Show the result to the user.',
-      inputSchema: { type: 'object', properties: { folder: { type: 'string' } }, required: ['folder'] },
-    })
+    await setup($)
     return next(e)
   })
 
@@ -74,6 +90,7 @@ export const register: Register = on => {
   on('tool.call', { tool: 'mcp__mod-maker__check_mod' }, async ($, e: any) => ({ result: await checkMod($, String(e.folder ?? '')) }))
 
   on('prompt.submit', async ($, e, next) => {
+    await setup($)
     if (e.origin?.kind === 'composer') {
       const asks = extractAsks(e.text)
       if (asks.length) {

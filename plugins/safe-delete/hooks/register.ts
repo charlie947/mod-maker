@@ -29,18 +29,40 @@ async function writeReceipts($: any, list: Receipt[]) {
   await $.fs.write(receipts, list.map(r => JSON.stringify(r)).join('\n') + '\n')
 }
 
+// Setup runs once: at session start or, after /reload-plugins (which does not fire
+// session.start), on the first prompt or tool call.
+let ready: Promise<void> | undefined
+function setup($: any): Promise<void> {
+  ready ??= doSetup($).catch(() => undefined) // a missing engine call must not stop the hooks
+  return ready
+}
+async function doSetup($: any) {
+  home = (await $.env.get('HOME')) ?? ''
+  const os = (await $.process.run(['uname', '-s']).catch(() => null))?.stdout.trim() ?? ''
+  const xdg = (await $.env.get('XDG_DATA_HOME')) ?? `${home}/.local/share`
+  bin = os === 'Darwin' ? `${home}/.Trash` : os === 'Linux' ? `${xdg}/Trash/files` : ''
+  receipts = `${home}/.claude/safe-delete/receipts.jsonl`
+  await $.command.register({ name: 'undo-delete', description: 'Put the last batch of files safe-delete moved to the Bin back where they were' })
+}
+
 export const register: Register = on => {
+  on('prompt.submit', async ($, e, next) => {
+    await setup($)
+    return next(e)
+  })
+
+  on('tool.call', async ($, e, next) => {
+    await setup($)
+    return next(e)
+  })
+
   on('session.start', async ($, e, next) => {
-    home = (await $.env.get('HOME')) ?? ''
-    const os = (await $.process.run(['uname', '-s']).catch(() => null))?.stdout.trim() ?? ''
-    const xdg = (await $.env.get('XDG_DATA_HOME')) ?? `${home}/.local/share`
-    bin = os === 'Darwin' ? `${home}/.Trash` : os === 'Linux' ? `${xdg}/Trash/files` : ''
-    receipts = `${home}/.claude/safe-delete/receipts.jsonl`
-    await $.command.register({ name: 'undo-delete', description: 'Put the last batch of files safe-delete moved to the Bin back where they were' })
+    await setup($)
     return next(e)
   })
 
   on('tool.call', { tool: 'Bash' }, async ($, e: any, next) => {
+    await setup($)
     const command = String(e.command ?? '')
     const plan = classify(command)
     if (plan.kind === 'none') return next(e)

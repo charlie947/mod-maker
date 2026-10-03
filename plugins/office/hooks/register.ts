@@ -97,15 +97,26 @@ function startTicker($: any) {
   })
 }
 
+// Setup runs once: at session start or, after /reload-plugins (which does not fire
+// session.start), on the first prompt or tool call.
+let ready: Promise<void> | undefined
+function setup($: any): Promise<void> {
+  ready ??= doSetup($).catch(() => undefined) // a missing engine call must not stop the hooks
+  return ready
+}
+async function doSetup($: any) {
+  for (const t of TOOLS) await $.tool.register(t)
+  await $.command.register({ name: 'desk', description: 'Name your desk in the office, for example /desk Writer' })
+  await $.command.register({ name: 'office', description: 'Show where the office page is' })
+  await ensure($)
+  try { await $.fs.write(`${dir()}/index.html`, await $.fs.read(`${$.plugin.root}/web/office.html`)) } catch { /* page copy is best effort */ }
+  await save($, () => undefined)
+  if (desk?.eta && !desk.eta.allDone) startTicker($)
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    for (const t of TOOLS) await $.tool.register(t)
-    await $.command.register({ name: 'desk', description: 'Name your desk in the office, for example /desk Writer' })
-    await $.command.register({ name: 'office', description: 'Show where the office page is' })
-    await ensure($)
-    try { await $.fs.write(`${dir()}/index.html`, await $.fs.read(`${$.plugin.root}/web/office.html`)) } catch { /* page copy is best effort */ }
-    await save($, () => undefined)
-    if (desk?.eta && !desk.eta.allDone) startTicker($)
+    await setup($)
     return next(e)
   })
 
@@ -122,6 +133,7 @@ export const register: Register = on => {
   }))
 
   on('prompt.submit', async ($, e, next) => {
+    await setup($)
     await save($, (d, now) => { d.activity = 'think'; d.detail = 'Reading the ask'; d.activityMs = now })
     return next({
       ...e,
@@ -173,6 +185,7 @@ export const register: Register = on => {
   })
 
   on('tool.call', async ($, e: any, next) => {
+    await setup($)
     const a = activityOf(e.tool, e)
     if (!a) return next(e)
     const key = String(e.tool_use_id ?? `${e.tool}-${Math.random()}`)

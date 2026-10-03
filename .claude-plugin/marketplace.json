@@ -12,7 +12,7 @@
       "name": "office",
       "source": "./plugins/office",
       "description": "A pixel-art office in a local web page: each Claude session gets a desk, walks to the filing cabinet when it reads, types when it edits, sends paper planes when it messages, and shows a live Done-by clock",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "mission-control",
@@ -24,13 +24,13 @@
       "name": "mod-maker",
       "source": "./plugins/mod-maker",
       "description": "/mod-audit, /mod-build, /mod-check and a habit spotter that offers to turn a repeat ask into a mod",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "safe-delete",
       "source": "./plugins/safe-delete",
       "description": "Deletes Claude runs go to the Bin instead, with a receipt and /undo-delete",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "secrets-guard",
@@ -42,7 +42,7 @@
       "name": "open-loops",
       "source": "./plugins/open-loops",
       "description": "A pane listing every ask you make in a session, ticked off only with proof",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "show-it",
@@ -66,7 +66,7 @@
       "name": "done-ping",
       "source": "./plugins/done-ping",
       "description": "A desktop notification with a sound when Claude finishes a long answer or may need your OK",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ]
 }

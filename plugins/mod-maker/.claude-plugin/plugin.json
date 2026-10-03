@@ -1,1 +1,1 @@
-{ "name": "mod-maker", "version": "0.1.0", "description": "Find what you ask Claude again and again, then build a mod that does it for you: /mod-audit, /mod-build, /mod-check and a habit spotter", "author": { "name": "Charlie Hills" }, "types": "./types/index.d.ts" }
+{ "name": "mod-maker", "version": "0.1.1", "description": "Find what you ask Claude again and again, then build a mod that does it for you: /mod-audit, /mod-build, /mod-check and a habit spotter", "author": { "name": "Charlie Hills" }, "types": "./types/index.d.ts" }

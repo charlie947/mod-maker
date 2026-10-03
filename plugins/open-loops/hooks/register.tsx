@@ -57,34 +57,50 @@ function reminder(open: readonly Loop[], added: readonly Loop[]) {
   return lines.join('\n')
 }
 
+// Setup runs once: at session start or, after /reload-plugins (which does not fire
+// session.start), on the first prompt or tool call.
+let ready: Promise<void> | undefined
+function setup($: any): Promise<void> {
+  ready ??= doSetup($).catch(() => undefined) // a missing engine call must not stop the hooks
+  return ready
+}
+async function doSetup($: any) {
+  await $.command.register({ name: 'loops', description: 'Show every ask from this session and what is still open' })
+  await $.tool.register({
+    name: 'close_loop',
+    description: "Mark one of the user's tracked asks as finished. Give the loop id and the proof.",
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'number' }, proof: { type: 'string', description: 'Path, link, sent line or tool result that proves it is done' } },
+      required: ['id', 'proof'],
+    },
+  })
+  await $.tool.register({
+    name: 'add_loop',
+    description: "Track an ask from the user's prompt that the auto-capture missed.",
+    inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
+  })
+  await $.tool.register({
+    name: 'drop_loop',
+    description: 'Remove a tracked line that was not a real ask, or that the user cancelled. Give the reason.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'number' }, reason: { type: 'string' } },
+      required: ['id', 'reason'],
+    },
+  })
+  void $.ui.open({ id: PANE, title: 'Open loops' })
+  await refreshStatus($)
+}
+
 export const register: Register = on => {
+  on('tool.call', async ($, e, next) => {
+    await setup($)
+    return next(e)
+  })
+
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'loops', description: 'Show every ask from this session and what is still open' })
-    await $.tool.register({
-      name: 'close_loop',
-      description: "Mark one of the user's tracked asks as finished. Give the loop id and the proof.",
-      inputSchema: {
-        type: 'object',
-        properties: { id: { type: 'number' }, proof: { type: 'string', description: 'Path, link, sent line or tool result that proves it is done' } },
-        required: ['id', 'proof'],
-      },
-    })
-    await $.tool.register({
-      name: 'add_loop',
-      description: "Track an ask from the user's prompt that the auto-capture missed.",
-      inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
-    })
-    await $.tool.register({
-      name: 'drop_loop',
-      description: 'Remove a tracked line that was not a real ask, or that the user cancelled. Give the reason.',
-      inputSchema: {
-        type: 'object',
-        properties: { id: { type: 'number' }, reason: { type: 'string' } },
-        required: ['id', 'reason'],
-      },
-    })
-    void $.ui.open({ id: PANE, title: 'Open loops' })
-    await refreshStatus($)
+    await setup($)
     return next(e)
   })
 
@@ -100,6 +116,7 @@ export const register: Register = on => {
   })
 
   on('prompt.submit', async ($, e, next) => {
+    await setup($)
     const added = await addLoops($, extractAsks(e.text))
     const open = openOf(await read($, loops))
     await refreshStatus($)

@@ -14,15 +14,37 @@ async function ping($: any, title: string, message: string) {
   if (argv) await $.process.run(argv, { timeoutMs: 5000 }).catch(() => undefined)
 }
 
+// Setup runs once: at session start or, after /reload-plugins (which does not fire
+// session.start), on the first prompt or tool call.
+let ready: Promise<void> | undefined
+function setup($: any): Promise<void> {
+  ready ??= doSetup($).catch(() => undefined) // a missing engine call must not stop the hooks
+  return ready
+}
+async function doSetup($: any) {
+  os = (await $.process.run(['uname', '-s']).catch(() => null))?.stdout.trim() ?? ''
+  const s = Number(await $.env.get('DONE_PING_AFTER_SECONDS'))
+  if (s > 0) afterMs = s * 1000
+}
+
 export const register: Register = on => {
+  on('prompt.submit', async ($, e, next) => {
+    await setup($)
+    return next(e)
+  })
+
+  on('tool.call', async ($, e, next) => {
+    await setup($)
+    return next(e)
+  })
+
   on('session.start', async ($, e, next) => {
-    os = (await $.process.run(['uname', '-s']).catch(() => null))?.stdout.trim() ?? ''
-    const s = Number(await $.env.get('DONE_PING_AFTER_SECONDS'))
-    if (s > 0) afterMs = s * 1000
+    await setup($)
     return next(e)
   })
 
   on('turn.complete', async ($, e, next) => {
+    await setup($)
     if (!e.agentId && !e.isAborted && e.durationMs >= afterMs) {
       const secs = Math.round(e.durationMs / 1000)
       await ping($, `Claude is done (${secs}s)`, summary(e.answer))
@@ -31,6 +53,7 @@ export const register: Register = on => {
   })
 
   on('tool.check', async ($, e, next) => {
+    await setup($)
     const r: any = await next(e)
     if (e.tool_use_id && r?.decision === 'ask') await ping($, 'Claude may need your OK', `It wants to use ${e.tool}.`)
     return r
