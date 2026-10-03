@@ -48,3 +48,14 @@ test('over the bar, the band offers Say it simpler and only drafts the request',
   expect(submitted).toBe(0)
   await ui.unmount()
 })
+
+test('under the bar, the band shows one quiet line and no button', async ($, on) => {
+  on('ui.render', async () => ({ type: 'Box', props: {}, children: [] }) as any)
+  on('classic.Stop', async () => ({}) as any)
+  await $.classic.Stop({ stop_hook_active: false, last_assistant_message: 'Done. The file is saved.' } as any)
+  const ui = await $.ui.mount({ plugin: 'plain-reply', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 90 } } as any)
+  const drawn = JSON.stringify(await ui.drawn())
+  expect(drawn).toContain('✓ plain reply')
+  expect(drawn).not.toContain('Say it simpler')
+  await ui.unmount()
+})

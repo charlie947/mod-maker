@@ -2,7 +2,7 @@
 
 Mod Maker finds what you ask Claude Code again and again, then builds a mod so you never ask again.
 
-The pack holds Mod Maker, 8 example mods and a virtual office. All 85 automatic tests pass (85/85).
+The pack holds Mod Maker, 9 example mods and a virtual office. All 85 automatic tests pass (85/85).
 
 A mod changes Claude Code itself: a pane, a status line, a guard before a command. It runs on its own. You don't have to remember it.
 
@@ -36,7 +36,7 @@ $ claude plugin install mod-maker@charlie-free-mods
 3. **/mod-check <folder>** says in plain English what a mod can read, run and send, before you trust it.
 4. **The habit spotter** is always on. The third time you ask the same thing in one session, a bar above your prompt asks: "Make it a mod?"
 
-## 8 example mods
+## 9 example mods
 
 | Mod | What it does | Status |
 |---|---|---|
@@ -48,6 +48,7 @@ $ claude plugin install mod-maker@charlie-free-mods
 | sessions-band | A bar above your prompt that lists your other open Claude Code sessions, with an Ask button. | tested only |
 | pre-build-check | Before Claude builds anything, it re-reads your own CLAUDE.md rules. A reference gives the structure, never the look. | tested only |
 | done-ping | A desktop notification with a sound when Claude finishes a long answer or may need your OK. | tested only |
+| plain-reply | Grades every reply for length, long sentences and jargon. Over your bar, a "Say it simpler" button puts a rewrite request in your prompt box. You press Enter. | tested only |
 
 ## The virtual office
 

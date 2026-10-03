@@ -67,6 +67,12 @@
       "source": "./plugins/done-ping",
       "description": "A desktop notification with a sound when Claude finishes a long answer or may need your OK",
       "version": "0.1.1"
+    },
+    {
+      "name": "plain-reply",
+      "source": "./plugins/plain-reply",
+      "description": "Grades every reply for length, long sentences and jargon, and offers a one-click 'Say it simpler' draft when it goes over your bar",
+      "version": "0.1.0"
     }
   ]
 }
