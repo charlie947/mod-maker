@@ -78,3 +78,29 @@ test('Hold keeps it listed, /outbox lists it, and Edit puts the text in the prom
   expect(reached.length).toBe(0) // Edit and Hold never send
   await ui.unmount()
 })
+
+test('every held message lists its attachments by file name, or says No attachments', async ($, on) => {
+  on('tool.call', async () => ({ result: 'sent' }) as any)
+  on('ui.render', async () => ({ type: 'Box', props: {}, children: [] }) as any)
+  on('ui.open', async () => ({ value: undefined }) as any)
+  on('ui.toast', async () => ({ value: undefined }) as any)
+  on('ui.status', async () => ({ value: undefined }) as any)
+  on('command.register', async () => ({ value: undefined }) as any)
+
+  await $.tool.call({ tool: 'mcp__claude_ai_Gmail__send_message', to: 'sam@example.com', subject: 'Rates for October', body: 'Rates for October are attached.' } as any)
+  await $.tool.call({ tool: 'Bash', command: 'wa-send --file /tmp/work/rates-oct.pdf team "Rates attached"' } as any)
+  await $.tool.call({ tool: 'mcp__claude_ai_Gmail__send_message', to: 'ops@example.com', body: 'See attached.', attachments: [{ filename: 'invoice-0412.pdf', mimeType: 'application/pdf' }] } as any)
+
+  const ui = await $.ui.mount({ plugin: 'outbox', ...PANE } as any)
+  const drawn = JSON.stringify(await ui.drawn())
+  expect(drawn).toContain('No attachments')
+  expect(drawn).toContain('Attached: rates-oct.pdf')
+  expect(drawn).toContain('Attached: invoice-0412.pdf')
+  expect(drawn).not.toContain('/tmp/work')
+  expect(drawn).not.toContain('[object Object]')
+  await ui.unmount()
+
+  const listed: any = await ($.command as any).run({ command: 'outbox', args: '' })
+  expect(listed.text).toContain('No attachments')
+  expect(listed.text).toContain('Attached: rates-oct.pdf')
+})

@@ -68,7 +68,8 @@ export function fromMcp(tool: string, input: Record<string, any>): Outgoing | nu
     if (to.length === 0 && input[k]) to.push(k.includes('thread') || k.includes('message') ? `the thread ${input[k]}` : String(input[k]))
   }
   const text = String(input.body ?? input.text ?? input.message ?? input.content ?? input.htmlBody ?? '')
-  const files = list(input.attachments ?? input.attachment)
+  const raw = input.attachments ?? input.attachment
+  const files = (Array.isArray(raw) ? raw : raw ? [raw] : []).flatMap((a: any) => (a && typeof a === 'object' ? [String(a.filename ?? a.name ?? a.path ?? a.url ?? 'a file')] : list(a)))
   return { channel, to: to.length ? to : ['(no recipient given)'], subject: input.subject ? String(input.subject) : undefined, text, files }
 }
 
@@ -81,4 +82,10 @@ export function outgoing(tool: string, input: Record<string, any>): Outgoing | n
 export function argsOf(e: Record<string, unknown>): Record<string, unknown> {
   const { tool: _t, tool_use_id: _id, agentId: _a, ...args } = e
   return args
+}
+
+// The attachment line every held message shows: file names only, or 'No attachments'.
+export function attachLine(files: string[]): string {
+  const names = files.filter(Boolean).map(f => f.split(/[\\/]/).filter(Boolean).pop() ?? f)
+  return names.length ? `Attached: ${names.join(', ')}` : 'No attachments'
 }

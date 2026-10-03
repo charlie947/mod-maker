@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import type { Held } from '../types'
-import { argsOf, outgoing } from './parse'
+import { argsOf, attachLine, outgoing } from './parse'
 
 // Nothing Claude writes to a person leaves without your OK. A send (wa-send, slack-send, an email or
 // Slack tool) is held, shown in full with who it goes to, and goes out only when you press Send.
@@ -52,7 +52,7 @@ const lines = (h: Held) => {
   const out = [`${h.channel} to ${h.to.join(', ')}`]
   if (h.subject) out.push(`Subject: ${h.subject}`)
   out.push(h.text || '(no text)')
-  if (h.files.length) out.push(`Attached: ${h.files.join(', ')}`)
+  out.push(attachLine(h.files))
   return out.join('\n')
 }
 
@@ -121,7 +121,7 @@ export const register: Register = on => {
                 <Text key={`${m.id}-l${i}`}>{l || ' '}</Text>
               ))}
             </Box>
-            {m.files.length > 0 && <Text dimColor>{`Attached: ${m.files.join(', ')}`}</Text>}
+            <Text bold={m.files.length > 0}>{attachLine(m.files)}</Text>
             {m.state !== 'sending' && (
               <Box flexDirection="row" marginTop={1}>
                 <Button key={`send-${m.id}`} label="Send" onPress={() => void send($, m).catch(() => undefined)} />
