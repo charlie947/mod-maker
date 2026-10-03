@@ -18,7 +18,7 @@
       "name": "mission-control",
       "source": "./plugins/mission-control",
       "description": "A live panel above your prompt: the plan as a stage bar, what Claude is doing in plain English, your asks ticked off, and a chime when it is done",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "mod-maker",
@@ -48,19 +48,19 @@
       "name": "show-it",
       "source": "./plugins/show-it",
       "description": "Opens the newest page, image or video Claude made, without stealing focus",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "sessions-band",
       "source": "./plugins/sessions-band",
       "description": "A band above the prompt listing your other open sessions, with an Ask button",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "pre-build-check",
       "source": "./plugins/pre-build-check",
       "description": "Re-reads your CLAUDE.md rules before any build, and keeps references to structure only",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "done-ping",

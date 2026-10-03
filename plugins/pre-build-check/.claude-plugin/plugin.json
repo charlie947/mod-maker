@@ -1,1 +1,1 @@
-{ "name": "pre-build-check", "version": "0.1.0", "description": "Before Claude builds anything, it re-reads your own CLAUDE.md rules and keeps a reference's structure without copying its look", "author": { "name": "Charlie Hills" } }
+{ "name": "pre-build-check", "version": "0.1.1", "description": "Before Claude builds anything, it re-reads your own CLAUDE.md rules and keeps a reference's structure without copying its look", "author": { "name": "Charlie Hills" } }
