@@ -24,3 +24,8 @@ test('a prompt that is only tags never blanks the card, and a later real prompt 
   const c = updateCard(b, 's1', '/Users/x/work', '<system-reminder>x</system-reminder>', 3000)
   expect([c.purpose, c.now]).toEqual(['Build the pricing page', 'Build the pricing page'])
 })
+
+test('a nested job notice cleans to nothing, never to a stray closing tag', () => {
+  const card = updateCard(null, 'a', '/x/proj', '<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>\n</task-notification>', 1)
+  expect(card.purpose).toBe('')
+})

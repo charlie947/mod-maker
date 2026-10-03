@@ -40,3 +40,11 @@ test('add, close with proof, drop', async $ => {
   const missing: any = await $.tool.call({ tool: 'mcp__open-loops__close_loop', id: 9, proof: 'x' } as any)
   expect(String(missing.result)).toContain('No loop L9')
 })
+
+test('every item of a numbered list is an ask, whatever its verb', () => {
+  expect(extractAsks('1. Count the rules in my-rules.md\n2. Add a fourth rule about dates\n3. Write a one-line summary to summary.md')).toEqual([
+    'Count the rules in my-rules.md',
+    'Add a fourth rule about dates',
+    'Write a one-line summary to summary.md',
+  ])
+})

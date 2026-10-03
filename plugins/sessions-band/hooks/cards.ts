@@ -5,9 +5,18 @@ export type { Card }
 
 export const STALE_MS = 15 * 60e3 // a session silent for 15 minutes drops off the band
 
-const clean = (s: string, n: number) => {
-  const t = s
-    .replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, ' ')
+// Removes tagged blocks innermost first, so a notice with tags inside it goes whole.
+const untag = (s: string) => {
+  let prev = ''
+  while (prev !== s) {
+    prev = s
+    s = s.replace(/<([a-z][\w-]*)[^>]*>[^<]*<\/\1>/gi, ' ')
+  }
+  return s.replace(/<\/?[a-z][\w-]*[^>]*>/gi, ' ')
+}
+
+export const clean = (s: string, n: number) => {
+  const t = untag(s)
     .replace(/\[(Image|Pasted text)[^\]]*\]/gi, ' ')
     .replace(/(file:\/\/|https?:\/\/)\S+/g, '(link)')
     .replace(/\s+/g, ' ')

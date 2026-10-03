@@ -58,7 +58,9 @@ export const register: Register = on => {
 
   on('prompt.submit', async ($, e, next) => {
     await setup($)
-    if (e.text.trim()) await writeMine($, e.text).catch(() => undefined)
+    // Only what a person typed describes the session: not job notices or peer messages.
+    const typed = (e as any).origin?.kind === undefined || (e as any).origin?.kind === 'composer'
+    if (typed && e.text.trim()) await writeMine($, e.text).catch(() => undefined)
     return next(e)
   })
 

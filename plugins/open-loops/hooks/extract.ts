@@ -2,7 +2,7 @@
 // through add_loop, so this only has to catch the obvious ones.
 
 const ASK_START =
-  /^(please |pls |can you|could you|can we|could we|will you|would you|make sure|let'?s |send|show|add|fix|build|put|push|check|update|tell|bring|give|get|load|schedule|delete|remove|clean|create|make|draft|write|reply|post|publish|upload|share|run|render|go ahead|do |finalise|finish|save|bank|review|qa|analyse|research|look (at|into)|find|move|set up|book|fill|need you|i need you|i want you|we need to)/i
+  /^(please |pls |can you|could you|can we|could we|will you|would you|make sure|let'?s |send|show|add|fix|build|put|push|check|update|tell|bring|give|get|load|schedule|delete|remove|clean|create|make|draft|write|reply|post|publish|upload|share|run|render|go ahead|do |finalise|finish|save|bank|review|qa|analyse|research|look (at|into)|find|move|set up|book|fill|count|list|compare|explain|summari[sz]e|rename|test|try|turn|change|convert|translate|need you|i need you|i want you|we need to)/i
 
 const ASK_ANYWHERE = /\b(make sure|please|can you|could you|can we|need you to|want you to)\b/i
 
@@ -20,16 +20,20 @@ export function extractAsks(raw: string): string[] {
     .replace(/\[(Image|Pasted text)[^\]]*\]/gi, ' ')
     .replace(/(^|\s)\/[a-z][\w:-]*(?=\s|$)/gi, ' ') // drop /plan, /close
     .replace(/(file:\/\/|https?:\/\/)\S+/g, '(link)')
+  // A line that starts a numbered or bulleted list is an ask whatever its verb.
   const sentences = text
-    .split(/(?<=[.?!])\s+|\n+/)
-    .map(s => s.replace(/^[\s\-*\d.)]+/, '').trim())
-    .filter(Boolean)
+    .split(/\n+/)
+    .flatMap(line => {
+      const listed = /^\s*(\d+[.)]|[-*•])\s+/.test(line)
+      return line.split(/(?<=[.?!])\s+/).map((s, i) => ({ s: s.replace(/^[\s\-*•\d.)]+/, '').trim(), listed: listed && i === 0 }))
+    })
+    .filter(x => x.s)
 
   const asks: string[] = []
-  for (const s of sentences) {
+  for (const { s, listed } of sentences) {
     if (s.length < 6 || s.length > 300) continue
     if (NOT_AN_ASK.test(s)) continue
-    if (s.endsWith('?') || ASK_START.test(s) || ASK_ANYWHERE.test(s)) asks.push(s)
+    if (listed || s.endsWith('?') || ASK_START.test(s) || ASK_ANYWHERE.test(s)) asks.push(s)
     if (asks.length >= MAX_ASKS) break
   }
   return asks
