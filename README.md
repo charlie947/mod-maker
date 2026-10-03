@@ -2,7 +2,7 @@
 
 Mod Maker finds what you ask Claude Code again and again, then builds a mod so you never ask again.
 
-The pack holds Mod Maker, 10 example mods and a virtual office. All 94 automatic tests pass (94/94).
+The pack holds Mod Maker, 10 example mods and a virtual office. All 99 automatic tests pass (99/99).
 
 A mod changes Claude Code itself: a pane, a status line, a guard before a command. It runs on its own. You don't have to remember it.
 
