@@ -3,6 +3,6 @@ export type Loop = { id: number; text: string; status: LoopStatus; proof?: strin
 
 declare module 'claude-code' {
   interface PluginState {
-    'open-loops': { loops: Loop[]; nextId: number }
+    'open-loops': { loops: Loop[]; nextId: number; heard: number[] }
   }
 }
