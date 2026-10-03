@@ -294,6 +294,7 @@ function ingest(d,synthetic){
       const k=id+'|'+f.name+'|'+f.ms; if(seenFiles.has(k))return; seenFiles.add(k);
       if(instant||now-(+f.ms||0)>90000){placeFolder(col,0);return;}
       if(ch&&!ch.errand&&!(ch.errands||[]).length)(ch.errands=ch.errands||[]).push({col});
+      else placeFolder(col,0); // its writer is busy or gone: the file still lands on the shelf
     });
   });
 

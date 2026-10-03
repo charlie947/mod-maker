@@ -48,3 +48,7 @@ test('every item of a numbered list is an ask, whatever its verb', () => {
     'Write a one-line summary to summary.md',
   ])
 })
+
+test('a numbered item with an unknown verb is still an ask', () => {
+  expect(extractAsks('1. Inspect the logs\n2. Document the result')).toEqual(['Inspect the logs', 'Document the result'])
+})

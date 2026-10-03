@@ -24,8 +24,9 @@ export function extractAsks(raw: string): string[] {
   const sentences = text
     .split(/\n+/)
     .flatMap(line => {
-      const listed = /^\s*(\d+[.)]|[-*•])\s+/.test(line)
-      return line.split(/(?<=[.?!])\s+/).map((s, i) => ({ s: s.replace(/^[\s\-*•\d.)]+/, '').trim(), listed: listed && i === 0 }))
+      const marker = /^\s*(\d+[.)]|[-*•])\s+/
+      const listed = marker.test(line)
+      return line.replace(marker, '').split(/(?<=[.?!])\s+/).map((s, i) => ({ s: s.replace(/^[\s\-*•\d.)]+/, '').trim(), listed: listed && i === 0 }))
     })
     .filter(x => x.s)
 
