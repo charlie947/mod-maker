@@ -149,6 +149,7 @@ export const register: Register = on => {
     const n = Number(e.step)
     if (!m.steps[n - 1]) return { result: `No step ${n}.` }
     await set($, m2 => ({ steps: finishStep(m2.steps, n) }))
+    await $.audio.play({ asset: 'sounds/step.wav' }).catch(() => undefined)
     return { result: `Step ${n} done.` }
   })
 
@@ -161,9 +162,21 @@ export const register: Register = on => {
     return { result: r.found ? `Ask #${e.id} ticked.` : `No ask #${e.id}.` }
   })
 
+  // Claude stops to ask the user's OK for a tool: the panel says so and plays the ask sound.
+  on('tool.check', async ($, e: any, next) => {
+    await setup($)
+    const r: any = await next(e)
+    if (e.tool_use_id && r?.decision === 'ask') {
+      await set($, () => ({ waiting: describe(e.tool, e.input ?? e) || 'a tool' }))
+      await $.audio.play({ asset: 'sounds/ask.wav' }).catch(() => undefined)
+    }
+    return r
+  })
+
   on('tool.call', async ($, e: any, next) => {
     await setup($)
     if (!(await read($, mission)).running) await start($)
+    if ((await read($, mission)).waiting) await set($, () => ({ waiting: undefined }))
     const line = describe(e.tool, e)
     if (line) await set($, m => ({ feed: [line, ...m.feed.filter(f => f !== line)].slice(0, FEED) }))
     if (e.tool === 'TodoWrite') await set($, () => ({ steps: fromTodos(e.todos) }))
@@ -181,7 +194,7 @@ export const register: Register = on => {
     const parts = [e.isAborted ? 'Stopped' : 'Done', `in ${clock(now - m.startedMs)}`]
     if (m.steps.length) parts.push(`${m.steps.filter(s => s.status === 'done').length} of ${m.steps.length} steps`)
     if (m.asks.length) parts.push(`${m.asks.filter(a => a.done).length} of ${m.asks.length} asks`)
-    await set($, () => ({ running: false, nowMs: now, doneBanner: parts.join(' · ') }))
+    await set($, () => ({ running: false, nowMs: now, doneBanner: parts.join(' · '), waiting: undefined }))
     if (!e.isAborted) await $.audio.play({ asset: 'sounds/done.wav' }).catch(() => undefined)
     return next(e)
   })
@@ -200,6 +213,9 @@ export const register: Register = on => {
     const openAsks = m.asks.filter(a => !a.done)
     const shownAsks = [...m.asks.filter(a => a.done).slice(-2), ...openAsks.slice(0, 3)]
     const accent = '#D97557'
+    const amber = '#F5B13D'
+    const pct = n ? Math.round((done / n) * 100) : 0
+    const waiting = m.running && m.waiting
 
     // A short window gives the band 2 or 3 rows: the same facts on two lines, no frame.
     if (((e.props as any).maxRows ?? 12) < 10) {
@@ -214,13 +230,13 @@ export const register: Register = on => {
               <Text bold color={accent}>MISSION CONTROL </Text>
               <Text color="green">{'█'.repeat(filled)}</Text>
               <Text dimColor>{'░'.repeat(barCells - filled)}</Text>
-              <Text> {n ? `${done} of ${n}` : 'no plan'} </Text>
+              <Text> {n ? `${done} of ${n} · ${pct}%` : 'no plan'} </Text>
               {current && <Text color={accent}>▶ {short(current.label, width - barCells - 32)}</Text>}
             </Text>
           )}
           <Text>
-            <Text bold>NOW </Text>
-            <Text color={m.running ? accent : undefined}>{short(m.feed[0] ?? (m.running ? 'Thinking…' : 'idle'), width - 28)}</Text>
+            <Text bold color={waiting ? amber : undefined}>{waiting ? '? NEEDS YOU ' : 'NOW '}</Text>
+            <Text color={waiting ? amber : m.running ? accent : undefined}>{short(waiting ? `allow ${waiting}` : m.feed[0] ?? (m.running ? 'Thinking…' : 'idle'), width - 28)}</Text>
             {m.asks.length > 0 && <Text dimColor>{`  ASKS ${m.asks.filter(a => a.done).length}/${m.asks.length} ✓`}</Text>}
             {m.running && <Text dimColor>{`  ${clock(m.nowMs - m.startedMs)}`}</Text>}
           </Text>
@@ -233,16 +249,23 @@ export const register: Register = on => {
     const big = Math.max(20, width - 24)
     const filledBig = n ? Math.round((done / n) * big) : 0
     const mark = (st: string) => (st === 'done' ? '✓' : st === 'now' ? '▶' : '○')
+    // The stage label rides the front of the fill, and a tick marks where each later stage starts.
+    const pill = n && done < n ? ` Step ${done + 1}/${n} ` : ''
+    const at = Math.max(0, Math.min(filledBig, big - pill.length))
+    const ticks = new Set(Array.from({ length: Math.max(0, n - 1) }, (_, k) => Math.round(((k + 1) / n) * big)))
+    let rest = ''
+    for (let c = at + pill.length; c < big; c++) rest += ticks.has(c) ? '┊' : '░'
     return (
-      <Box flexDirection="column" borderStyle="round" borderColor={m.running ? accent : 'green'} paddingX={1} width={width}>
+      <Box flexDirection="column" borderStyle="round" borderColor={waiting ? amber : m.running ? accent : 'green'} paddingX={1} width={width}>
         <Box flexDirection="row" justifyContent="space-between">
-          <Text bold color={accent}>◆ MISSION CONTROL</Text>
+          <Text bold color={waiting ? amber : accent}>{waiting ? '? MISSION CONTROL · NEEDS YOU' : '◆ MISSION CONTROL'}</Text>
           <Text dimColor>{m.running ? `working · ${clock(m.nowMs - m.startedMs)}` : 'finished'}</Text>
         </Box>
         <Text>
-          <Text color="green">{'█'.repeat(filledBig)}</Text>
-          <Text dimColor>{'░'.repeat(big - filledBig)}</Text>
-          <Text bold>{`  ${n ? `${done} of ${n} steps` : 'no plan yet'}`}</Text>
+          <Text color={waiting ? amber : 'green'}>{'█'.repeat(at)}</Text>
+          {pill && <Text bold color="black" backgroundColor={waiting ? amber : accent}>{pill}</Text>}
+          <Text dimColor>{rest}</Text>
+          <Text bold>{`  ${n ? `${done} of ${n} steps · ${pct}%` : 'no plan yet'}`}</Text>
         </Text>
         {m.steps.slice(0, 6).map((st, i) => (
           <Text key={`s${i}`} color={st.status === 'done' ? 'green' : st.status === 'now' ? accent : undefined} dimColor={st.status === 'todo'} bold={st.status === 'now'}>
@@ -250,8 +273,10 @@ export const register: Register = on => {
           </Text>
         ))}
         <Box marginTop={1} flexDirection="row">
-          <Text bold>NOW  </Text>
-          <Text color={m.running ? accent : undefined}>{m.feed[0] ? short(m.feed[0], width - 12) : m.running ? 'Thinking…' : 'All done'}</Text>
+          <Text bold color={waiting ? amber : undefined}>{waiting ? '?    ' : 'NOW  '}</Text>
+          <Text color={waiting ? amber : m.running ? accent : undefined}>
+            {waiting ? short(`Waiting for you: allow ${waiting}`, width - 12) : m.feed[0] ? short(m.feed[0], width - 12) : m.running ? 'Thinking…' : 'All done'}
+          </Text>
         </Box>
         {shownAsks.length > 0 && (
           <Box flexDirection="column">

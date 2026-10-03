@@ -9,6 +9,8 @@ export type Mission = {
   nowMs: number
   running: boolean
   doneBanner: string
+  /** Set while Claude waits for the user to allow a tool; cleared when the work goes on. */
+  waiting?: string
 }
 
 declare module 'claude-code' {

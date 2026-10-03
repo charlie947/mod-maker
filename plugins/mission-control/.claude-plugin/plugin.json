@@ -1,1 +1,1 @@
-{ "name": "mission-control", "version": "0.1.1", "description": "A live panel above your prompt: the plan as a stage bar, what Claude is doing in plain English, your asks ticked off, and a sound when it is done", "author": { "name": "Charlie Hills" }, "types": "./types/index.d.ts" }
+{ "name": "mission-control", "version": "0.1.2", "description": "A live panel above your prompt: the plan as a stage bar, what Claude is doing in plain English, your asks ticked off, and a sound when it is done", "author": { "name": "Charlie Hills" }, "types": "./types/index.d.ts" }
