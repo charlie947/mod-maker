@@ -1,0 +1,9 @@
+{
+  "name": "brand-theme",
+  "version": "0.1.0",
+  "description": "Dresses Claude Code in your brand: a branded spinner, tool rows and question dialog, plus a band above the prompt with your name, open loops and context used. Colours live in one block you can swap",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Charlie Hills"
+  }
+}

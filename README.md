@@ -2,7 +2,7 @@
 
 Mod Maker finds what you ask Claude Code again and again, then builds a mod so you never ask again.
 
-The pack holds Mod Maker, 10 example mods and a virtual office. All 109 automatic tests pass (109/109).
+The pack holds Mod Maker, 11 example mods and a virtual office. All 118 automatic tests pass (118/118).
 
 A mod changes Claude Code itself: a pane, a status line, a guard before a command. It runs on its own. You don't have to remember it.
 
@@ -36,7 +36,7 @@ $ claude plugin install mod-maker@charlie-free-mods
 3. **/mod-check <folder>** says in plain English what a mod can read, run and send, before you trust it.
 4. **The habit spotter** is always on. The third time you ask the same thing in one session, a bar above your prompt asks: "Make it a mod?"
 
-## 10 example mods
+## 11 example mods
 
 | Mod | What it does | Status |
 |---|---|---|
@@ -50,6 +50,7 @@ $ claude plugin install mod-maker@charlie-free-mods
 | done-ping | A desktop notification with a sound when Claude finishes a long answer or may need your OK. | tested only |
 | plain-reply | Grades every reply for length, long sentences and jargon. Over your bar, a "Say it simpler" button puts a rewrite request in your prompt box. You press Enter. | tested only |
 | outbox | Holds every message Claude tries to send (WhatsApp, email, Slack). You see the full text, every recipient and every attachment, then press Send, Edit or Hold. Nothing leaves until you press Send. | tested only |
+| brand-theme | Dresses Claude Code in your brand. The spinner, the tool Claude is running and the question dialog take your colours, and a band above the prompt shows your name, open loops and how full the context is. | watched live |
 
 ## The virtual office
 
@@ -66,6 +67,26 @@ Safe-delete catches the delete commands Claude types: `rm`, `rm -r`, `rm -rf`, `
 ## What mission-control does not do yet
 
 In a short terminal window, an open pane (like the open-loops list) takes the space above the prompt, so the mission-control panel does not show. Close the pane, or use mission-control on its own: it keeps its own list of your asks.
+
+## brand-theme: make it yours
+
+All the colours sit in one block at the top of `plugins/brand-theme/hooks/theme.ts`. Change the six values and the name, and the mod draws in your brand. The default is the charliehills.ai palette: navy `#00132F`, panels `#0A2342`, hairlines `#1C3A5E`, and one sky signal `#58B6FF`.
+
+| Spinner | Running tool | Question dialog | Band |
+|---|---|---|---|
+| ![spinner](plugins/brand-theme/screenshots/spinner.png) | ![tool row](plugins/brand-theme/screenshots/tool-row.png) | ![dialog](plugins/brand-theme/screenshots/dialog.png) | ![band](plugins/brand-theme/screenshots/band.png) |
+
+The screenshots come from a real Claude Code 2.1.288 session with the mod loaded.
+
+**What it cannot change.** Your terminal app paints the background behind Claude Code, not the mod. To make the whole window navy, set your terminal's background to `#00132F`. In most terminals (iTerm2, Ghostty, kitty, WezTerm) this one line does it for the open window:
+
+```
+printf '\e]11;#00132F\a'
+```
+
+To keep it, put `background = #00132F` in Ghostty's config, or set the colour in your terminal's profile. Then run `/theme` in Claude Code and pick a dark theme, so its own text stays readable on navy.
+
+The mod also cannot repaint the Claude mascot in the logo, the permission prompt, or finished tool rows (they keep Claude Code's own colours so a red error stays red). The open loops count shows only when the open-loops mod is installed. The Desktop app keeps its own look.
 
 ## Settings (optional)
 

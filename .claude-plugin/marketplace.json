@@ -79,6 +79,12 @@
       "source": "./plugins/outbox",
       "description": "Holds every message Claude tries to send (WhatsApp, email, Slack) until you read it, see who it goes to, and press Send",
       "version": "0.1.0"
+    },
+    {
+      "name": "brand-theme",
+      "source": "./plugins/brand-theme",
+      "description": "Dresses Claude Code in your brand: a branded spinner, the running tool row and the question dialog, plus a band above the prompt with your name, open loops and context used. One colour block to swap",
+      "version": "0.1.0"
     }
   ]
 }
