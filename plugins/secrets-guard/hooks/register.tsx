@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import type { EnvRequest } from '../types'
-import { checkValue, KEY_NAME, listKeys, setKey } from './envfile'
+import { checkValue, CODE_FILE, KEY_NAME, listKeys, missingKeys, readsIn, setKey } from './envfile'
 import { isSecretFile, maskKeys, secretCommand } from './secrets'
 
 // Keeps keys out of the chat. Claude cannot open .env, SSH keys, .pem files or credential
@@ -17,10 +17,33 @@ const FILE_TOOLS = new Set(['Read', 'Edit', 'Write', 'NotebookEdit'])
 const PANE = 'env'
 const ENV_HINT = 'To see which keys exist, call env_list. To get a missing key, call env_request: the user pastes it into a pane and it goes straight into .env.'
 
-const request = atom({ plugin: 'secrets-guard', key: 'request' } as const, null)
+const requests = atom({ plugin: 'secrets-guard', key: 'requests' } as const, []) // first one shows, the rest wait their turn
 const keys = atom({ plugin: 'secrets-guard', key: 'keys' } as const, [])
 const fileAtom = atom({ plugin: 'secrets-guard', key: 'file' } as const, '.env')
 const error = atom({ plugin: 'secrets-guard', key: 'error' } as const, '')
+const missing = atom({ plugin: 'secrets-guard', key: 'missing' } as const, [])
+
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'venv', '.venv', '__pycache__'])
+
+// Reads the project's code (3 folders deep, 400 files at most) for the variable names it asks for.
+async function codeReads($: any, root: string): Promise<string[]> {
+  const names = new Set<string>()
+  let seen = 0
+  const walk = async (dir: string, depth: number) => {
+    const entries = await $.fs.list(dir).catch(() => [])
+    for (const e of entries) {
+      if (seen >= 400) return
+      const path = `${dir}/${e.name}`
+      if (e.kind === 'dir' && depth < 3 && !SKIP_DIRS.has(e.name)) await walk(path, depth + 1)
+      else if (e.kind === 'file' && CODE_FILE.test(e.name)) {
+        seen++
+        for (const n of readsIn(await $.fs.read(path).catch(() => ''))) names.add(n)
+      }
+    }
+  }
+  await walk(root, 0)
+  return [...names]
+}
 
 const TOOLS = [
   {
@@ -60,8 +83,12 @@ async function doSetup($: any) {
 
 async function loadKeys($: any, file: string) {
   const text = await $.fs.read(file).catch(() => '')
-  await update($, keys, () => listKeys(text))
+  const list = listKeys(text)
+  await update($, keys, () => list)
   await update($, fileAtom, () => file)
+  const root = file.includes('/') ? file.slice(0, file.lastIndexOf('/')) || '/' : await $.session.cwd().catch(() => '.')
+  const reads = await codeReads($, root).catch(() => [] as string[])
+  await update($, missing, () => missingKeys(reads, list.map(k => k.name)))
   return text as string
 }
 
@@ -74,14 +101,14 @@ async function save($: any, req: EnvRequest, value: string) {
   const text = await $.fs.read(req.file).catch(() => '')
   await $.fs.write(req.file, setKey(text, req.key, value.trim()))
   await update($, error, () => '')
-  await update($, request, () => null)
+  await update($, requests, list => list.filter(r => r.key !== req.key))
   await loadKeys($, req.file)
   $.ui.toast(`${req.key} saved to ${req.file.split('/').pop()}`)
   void $.prompt.submit({ text: `[env] ${req.key} is now set in ${req.file.split('/').pop()}. Continue.` })
 }
 
 async function skip($: any, req: EnvRequest) {
-  await update($, request, () => null)
+  await update($, requests, list => list.filter(r => r.key !== req.key))
   await update($, error, () => '')
   void $.prompt.submit({ text: `[env] The user skipped ${req.key} for now. Carry on without it.` })
 }
@@ -105,8 +132,11 @@ export const register: Register = on => {
     const file = String(e.file || '.env')
     await loadKeys($, file)
     const list = await read($, keys)
-    if (!list.length) return { result: `${file} has no keys yet. Call env_request to ask the user for one.` }
-    return { result: `${list.length} key(s) in ${file} (values masked):\n${list.map(k => `${k.name}  ${k.masked}`).join('\n')}` }
+    const gone = await read($, missing)
+    const lines = [list.length ? `${list.length} key(s) in ${file} (values hidden):\n${list.map(k => `${k.name}  ${k.masked}`).join('\n')}` : `${file} has no keys yet.`]
+    if (gone.length) lines.push(`The code reads ${gone.length} key(s) that ${file} does not set: ${gone.join(', ')}. Call env_request for each.`)
+    else if (!list.length) lines.push('Call env_request to ask the user for one.')
+    return { result: lines.join('\n') }
   })
 
   on('tool.call', { tool: 'mcp__secrets-guard__env_request' }, async ($, e: any) => {
@@ -125,7 +155,7 @@ export const register: Register = on => {
     }
     await loadKeys($, file)
     await update($, error, () => '')
-    await update($, request, () => req)
+    await update($, requests, list => [...list.filter(r => r.key !== key), req])
     await $.ui.open({ id: PANE, title: '.env', focus: true } as any)
     return { result: `Asked the user to paste ${key} into the .env pane. Stop here and wait: the next message will say "[env] ${key} is now set". Do not ask for the value in the chat.` }
   })
@@ -160,49 +190,61 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text, Button, Input } = $.ui.resolve(e) as any
-    const req = await read($, request)
+    const queue = await read($, requests)
+    const req = queue[0]
     const list = await read($, keys)
+    const gone = await read($, missing)
     const file = (await read($, fileAtom)).split('/').pop()
     const bad = await read($, error)
-    const yellow = '#F5B13D'
+    const accent = '#D97557'
     return (
       <Box flexDirection="column">
         {req && (
-          <Box flexDirection="column" borderStyle="round" borderColor={yellow} paddingX={1}>
-            <Text bold color={yellow}>◆ Claude needs a value</Text>
-            <Text bold>{req.key}</Text>
-            {req.why && <Text>{req.why}</Text>}
-            {req.where.length > 0 && <Text dimColor>Where to find it:</Text>}
+          <Box flexDirection="column" borderStyle="single" borderColor={accent} paddingX={1}>
+            <Text>
+              <Text bold color="black" backgroundColor={accent}>{' KEY REQUEST '}</Text>
+              <Text bold>{`  ${req.key}`}</Text>
+              {queue.length > 1 && <Text dimColor>{`  1 of ${queue.length}, then ${queue.slice(1).map(r => r.key).join(', ')}`}</Text>}
+            </Text>
+            {req.why && <Text>{`For    ${req.why}`}</Text>}
             {req.where.map((s, i) => (
-              <Text key={`w${i}`}>{`  ${i + 1}. ${s}`}</Text>
+              <Text key={`w${i}`}>{`${i === 0 ? 'Find   ' : '       '}${s}`}</Text>
             ))}
-            {req.link && <Text color="cyan">{`  ${req.link}`}</Text>}
-            {req.format && <Text dimColor>{`Looks like: ${req.format}`}</Text>}
+            {req.link && <Text color={accent}>{`Open   ${req.link}`}</Text>}
+            {req.format && <Text dimColor>{`Shape  ${req.format}`}</Text>}
             <Input
               key="paste"
-              label="Paste ▸ "
-              placeholder={`${req.key} value (goes to ${file}, never to Claude)`}
+              label="Value  "
+              placeholder={`goes into ${file} only. Claude never reads it`}
               value=""
-              submitLabel="save"
+              submitLabel="store it"
               autoFocus
               onSubmit={(v: string) => void save($, req, v)}
             />
-            {bad && <Text color="red">{`✕ ${bad}`}</Text>}
+            {bad && <Text color="red">{`Not stored: ${bad}`}</Text>}
             <Box flexDirection="row">
-              <Button key="skip" label="skip for now" onPress={() => void skip($, req)} />
+              <Button key="skip" label="Not now" onPress={() => void skip($, req)} />
             </Box>
           </Box>
         )}
         <Box flexDirection="column" marginTop={req ? 1 : 0}>
-          <Text bold>{`${file} · ${list.length} key(s)`}</Text>
-          {list.length === 0 && <Text dimColor>No keys yet.</Text>}
+          <Text bold color={accent}>{`${file} · ${list.length} set${gone.length ? ` · ${gone.length} missing` : ''}`}</Text>
+          {list.length === 0 && gone.length === 0 && <Text dimColor>Nothing set yet.</Text>}
           {list.map(k => (
             <Text key={`k-${k.name}`}>
+              <Text color="green">{'✓ '}</Text>
               <Text>{k.name.padEnd(22)}</Text>
               <Text dimColor>{k.masked}</Text>
             </Text>
           ))}
-          <Text dimColor>Values stay masked. Claude sees names only.</Text>
+          {gone.map(n => (
+            <Text key={`m-${n}`}>
+              <Text color="red">{'✕ '}</Text>
+              <Text>{n.padEnd(22)}</Text>
+              <Text color="red">your code reads it, not set</Text>
+            </Text>
+          ))}
+          <Text dimColor>Claude sees key names and lengths. Never a character of a value.</Text>
         </Box>
       </Box>
     )

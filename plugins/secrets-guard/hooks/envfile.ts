@@ -6,11 +6,10 @@ const LINE = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/
 
 const unquote = (v: string) => v.trim().replace(/^(['"])(.*)\1$/, '$2')
 
-// Shows that a value is there and which one it is, never the value: the last 4 characters
-// only when the value is long enough that 4 characters give nothing away.
+// Shows that a value is there and how long it is. No character of the value is ever shown.
 export function maskValue(v: string): string {
-  if (!v) return '(empty)'
-  return v.length >= 16 ? `●●●●${v.slice(-4)}` : '●●●●●●●●'
+  if (!v) return 'empty'
+  return `hidden · ${v.length} chars`
 }
 
 export function listKeys(text: string): EnvKey[] {
@@ -44,3 +43,29 @@ export function checkValue(value: string, minLength = 8): string | null {
   if (value.trim().length < minLength) return `That is ${value.trim().length} characters. This key is at least ${minLength}.`
   return null
 }
+
+// The variable names code reads, from the usual ways JavaScript, TypeScript, Python, Deno and
+// shell scripts ask for them.
+const READS: RegExp[] = [
+  /process\.env\.([A-Z_][A-Z0-9_]*)/g,
+  /process\.env\[\s*['"]([A-Z_][A-Z0-9_]*)['"]\s*\]/g,
+  /import\.meta\.env\.([A-Z_][A-Z0-9_]*)/g,
+  /os\.environ\[\s*['"]([A-Z_][A-Z0-9_]*)['"]\s*\]/g,
+  /os\.(?:environ\.get|getenv)\(\s*['"]([A-Z_][A-Z0-9_]*)['"]/g,
+  /Deno\.env\.get\(\s*['"]([A-Z_][A-Z0-9_]*)['"]/g,
+]
+const BUILT_IN = new Set(['NODE_ENV', 'HOME', 'PATH', 'PWD', 'USER', 'SHELL', 'TERM', 'CI', 'PORT', 'TZ', 'LANG'])
+
+export function readsIn(code: string): string[] {
+  const out = new Set<string>()
+  for (const re of READS) for (const m of code.matchAll(re)) if (!BUILT_IN.has(m[1])) out.add(m[1])
+  return [...out]
+}
+
+// Names the code reads that the .env file does not set: the ones that break at run time.
+export function missingKeys(read: string[], set: string[]): string[] {
+  const have = new Set(set)
+  return [...new Set(read)].filter(n => !have.has(n)).sort()
+}
+
+export const CODE_FILE = /\.(m?[jt]sx?|cjs|py|sh)$/

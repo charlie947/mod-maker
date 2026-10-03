@@ -1,1 +1,1 @@
-{ "name": "secrets-guard", "version": "0.1.2", "description": "Stops Claude reading .env and key files, masks API keys in command output, and lets you hand Claude a key through a pane without it ever seeing the value", "author": { "name": "Charlie Hills" }, "types": "./types/index.d.ts" }
+{ "name": "secrets-guard", "version": "0.1.3", "description": "Stops Claude reading .env and key files, masks API keys in command output, and lets you hand Claude a key through a pane without it ever seeing the value", "author": { "name": "Charlie Hills" }, "types": "./types/index.d.ts" }

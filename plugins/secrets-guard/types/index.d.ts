@@ -12,6 +12,6 @@ export type EnvKeyRow = { name: string; masked: string }
 
 declare module 'claude-code' {
   interface PluginState {
-    'secrets-guard': { request: EnvRequest | null; keys: EnvKeyRow[]; file: string; error: string }
+    'secrets-guard': { requests: EnvRequest[]; keys: EnvKeyRow[]; file: string; error: string; missing: string[] }
   }
 }
