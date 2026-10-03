@@ -22,3 +22,12 @@ test('skips temp, scratchpad, node_modules and non-visual files', () => {
   expect(isVisual('/Users/sam/Desktop/notes.md')).toBe(false)
   expect(isVisual('/Users/sam/Desktop/board.html')).toBe(true)
 })
+
+test('finds a file a command wrote by a bare name, read against its folder', () => {
+  const text = 'python3 plot.py > /dev/null && ls\nSaved chart.png and out/q3.html'
+  expect(visualPathsIn(text, HOME, '/Users/sam/proj')).toEqual(['/Users/sam/proj/chart.png', '/Users/sam/proj/out/q3.html'])
+})
+
+test('without a folder, bare names are left alone', () => {
+  expect(visualPathsIn('Saved chart.png', HOME)).toEqual([])
+})

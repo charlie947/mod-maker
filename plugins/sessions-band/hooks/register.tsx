@@ -35,33 +35,48 @@ async function writeMine($: any, prompt: string) {
   await $.fs.write(`${dir}/${selfId}.json`, JSON.stringify(mine))
 }
 
+// Setup runs once: at session start or, after /reload-plugins (which does not fire
+// session.start), on the first prompt or tool call.
+let ready: Promise<void> | undefined
+function setup($: any): Promise<void> {
+  ready ??= doSetup($).catch(() => undefined) // a missing engine call must not stop the hooks
+  return ready
+}
+async function doSetup($: any) {
+  dir = `${(await $.env.get('HOME')) ?? ''}/.claude/session-cards`
+  selfId = await $.session.id()
+  await $.command.register({ name: 'sessions', description: 'Show or hide the band of other open sessions' })
+  await scan($)
+  $.clock.every(60e3, () => void scan($))
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    dir = `${(await $.env.get('HOME')) ?? ''}/.claude/session-cards`
-    selfId = await $.session.id()
-    await $.command.register({ name: 'sessions', description: 'Show or hide the band of other open sessions' })
-    await scan($)
-    $.clock.every(60e3, () => void scan($))
+    await setup($)
     return next(e)
   })
 
   on('prompt.submit', async ($, e, next) => {
+    await setup($)
     if (e.text.trim()) await writeMine($, e.text).catch(() => undefined)
     return next(e)
   })
 
   on('turn.complete', async ($, e, next) => {
+    await setup($)
     if (mine) await writeMine($, mine.now).catch(() => undefined) // keep the card fresh while working
     await scan($)
     return next(e)
   })
 
   on('session.end', async ($, e, next) => {
+    await setup($)
     await $.fs.write(`${dir}/${selfId}.json`, JSON.stringify({ ...mine, updatedMs: 0 })).catch(() => undefined)
     return next(e)
   })
 
   on('command.run', { command: 'sessions' }, async $ => {
+    await setup($)
     await update($, isHidden, h => !h)
     const list = await read($, others)
     const now = await $.clock.now()

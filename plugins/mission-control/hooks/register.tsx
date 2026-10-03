@@ -81,30 +81,45 @@ async function start($: any) {
   timer = $.clock.every(1000, () => void $.clock.now().then(t => set($, () => ({ nowMs: t }))))
 }
 
+// Setup runs once: at session start or, after /reload-plugins (which does not fire
+// session.start), on the first prompt or tool call.
+let ready: Promise<void> | undefined
+function setup($: any): Promise<void> {
+  ready ??= doSetup($).catch(() => undefined) // a missing engine call must not stop the hooks
+  return ready
+}
+async function doSetup($: any) {
+  for (const t of TOOLS) await $.tool.register(t)
+  await $.command.register({ name: 'mission', description: 'Clear the mission control panel' })
+  await $.command.register({ name: 'mission-rows', description: 'Switch plain-English tool rows on or off' })
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    for (const t of TOOLS) await $.tool.register(t)
-    await $.command.register({ name: 'mission', description: 'Clear the mission control panel' })
-    await $.command.register({ name: 'mission-rows', description: 'Switch plain-English tool rows on or off' })
+    await setup($)
     return next(e)
   })
 
   on('command.run', { command: 'mission-rows' }, async $ => {
+    await setup($)
     await update($, plainRows, v => !v)
     return { text: (await read($, plainRows)) ? 'Plain tool rows on.' : 'Plain tool rows off: the full rows are back.' }
   })
 
   on('command.run', { command: 'mission' }, async $ => {
+    await setup($)
     await update($, mission, () => EMPTY)
     return { text: 'Mission control cleared.' }
   })
 
   on('turn.start', async ($, e, next) => {
+    await setup($)
     await start($)
     return next(e)
   })
 
   on('prompt.submit', async ($, e, next) => {
+    await setup($)
     const typed = (e as any).origin?.kind === 'composer'
     const texts = typed ? extractAsks(e.text) : []
     if (texts.length) await addAsks($, texts)
@@ -112,6 +127,7 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: 'mcp__mission-control__add_ask' }, async ($, e: any) => {
+    await setup($)
     const text = String(e.text ?? '').trim()
     if (!text) return { result: 'Nothing added: text was empty.' }
     const id = await addAsks($, [text])
@@ -119,6 +135,7 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: 'mcp__mission-control__set_plan' }, async ($, e: any) => {
+    await setup($)
     if (!(await read($, mission)).running) await start($)
     const steps = setPlan(Array.isArray(e.steps) ? e.steps.slice(0, 8) : [])
     // A new plan is a new job: asks already ticked off drop away, open ones stay.
@@ -127,6 +144,7 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: 'mcp__mission-control__step_done' }, async ($, e: any) => {
+    await setup($)
     const m = await read($, mission)
     const n = Number(e.step)
     if (!m.steps[n - 1]) return { result: `No step ${n}.` }
@@ -135,6 +153,7 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: 'mcp__mission-control__tick_ask' }, async ($, e: any) => {
+    await setup($)
     const proof = String(e.proof ?? '').trim()
     if (!proof) return { result: 'Not ticked: proof is required.' }
     const r = tick((await read($, mission)).asks, Number(e.id), proof)
@@ -143,6 +162,7 @@ export const register: Register = on => {
   })
 
   on('tool.call', async ($, e: any, next) => {
+    await setup($)
     if (!(await read($, mission)).running) await start($)
     const line = describe(e.tool, e)
     if (line) await set($, m => ({ feed: [line, ...m.feed.filter(f => f !== line)].slice(0, FEED) }))
@@ -152,6 +172,7 @@ export const register: Register = on => {
   })
 
   on('turn.complete', async ($, e, next) => {
+    await setup($)
     if (e.agentId) return next(e)
     timer?.cancel()
     timer = undefined

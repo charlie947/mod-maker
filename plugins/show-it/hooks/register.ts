@@ -34,31 +34,46 @@ async function capture($: any, paths: string[]) {
 }
 
 
+// Setup runs once: at session start or, after /reload-plugins (which does not fire
+// session.start), on the first prompt or tool call.
+let ready: Promise<void> | undefined
+function setup($: any): Promise<void> {
+  ready ??= doSetup($).catch(() => undefined) // a missing engine call must not stop the hooks
+  return ready
+}
+async function doSetup($: any) {
+  home = (await $.env.get('HOME')) ?? home
+  os = (await $.process.run(['uname', '-s']).catch(() => null))?.stdout.trim() ?? ''
+  await $.command.register({ name: 'show', description: 'Bring the last page, image or video Claude made to the front' })
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    home = (await $.env.get('HOME')) ?? home
-    os = (await $.process.run(['uname', '-s']).catch(() => null))?.stdout.trim() ?? ''
-    await $.command.register({ name: 'show', description: 'Bring the last page, image or video Claude made to the front' })
+    await setup($)
     return next(e)
   })
 
   on('prompt.submit', async ($, e, next) => {
+    await setup($)
     turnStart = await $.clock.now()
     return next(e)
   })
 
   on('tool.call', async ($, e: any, next) => {
+    await setup($)
     const ran: any = await next(e)
     if (ran?.deny || ran?.isError) return ran
     if (e.tool === 'Write' || e.tool === 'Edit') {
       if (isVisual(String(e.file_path ?? ''))) await capture($, [e.file_path])
     } else if (e.tool === 'Bash') {
-      await capture($, visualPathsIn(`${String(e.command ?? '')}\n${ran?.text ?? ''}`, home))
+      const cwd = await $.session.cwd().catch(() => undefined)
+      await capture($, visualPathsIn(`${String(e.command ?? '')}\n${ran?.text ?? ''}`, home, cwd))
     }
     return ran
   })
 
   on('turn.complete', async ($, e, next) => {
+    await setup($)
     const list = await read($, pending)
     if (list.length > 0) {
       const newest = list[list.length - 1]
@@ -75,6 +90,7 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'show' }, async $ => {
+    await setup($)
     const last = await read($, lastShown)
     if (!last) return { text: 'Nothing shown yet in this session.' }
     const ok = await show($, last.path, true)
