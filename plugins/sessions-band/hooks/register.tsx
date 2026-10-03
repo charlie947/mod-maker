@@ -29,7 +29,7 @@ async function scan($: any) {
   const list = liveOthers(cards, selfId, now)
   // Say once, by name, when another session starts waiting for you.
   const before = new Map((await read($, others)).map((c: Card) => [c.id, c.state]))
-  for (const c of list) if (c.state === 'needs' && before.has(c.id) && before.get(c.id) !== 'needs') $.ui.toast(`The session in ${c.place} needs you`)
+  for (const c of list) if (c.state === 'needs' && before.has(c.id) && before.get(c.id) !== 'needs') $.ui.toast(`${c.place} is waiting on you${c.waitingFor ? `: ${c.waitingFor}` : ''}`)
   await update($, others, () => list)
   await update($, nowMs, () => now)
 }
@@ -115,7 +115,7 @@ export const register: Register = on => {
     await update($, isHidden, h => !h)
     const list = order(await read($, others))
     const now = await $.clock.now()
-    const word: Record<string, string> = { running: 'running', needs: 'NEEDS YOU', done: 'done' }
+    const word: Record<string, string> = { running: 'working', needs: 'WAITING ON YOU', done: 'finished' }
     const lines = list.map(c => `${word[c.state ?? ''] ?? 'idle'} · ${c.place}: ${c.state === 'needs' && c.waitingFor ? `asks: ${c.waitingFor}` : c.purpose || c.now} (${rowTime(c, now) || ago(now - c.updatedMs)})`)
     return { text: list.length ? `${list.length} other sessions:\n${lines.join('\n')}` : 'No other sessions are running this mod.' }
   })
@@ -130,9 +130,9 @@ export const register: Register = on => {
     const short = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
     const orange = '#D97557'
     const look: Record<string, { word: string; color: string }> = {
-      running: { word: '✱ running', color: orange },
-      needs: { word: '! needs you', color: 'red' },
-      done: { word: '✓ done', color: 'green' },
+      running: { word: '▸ working', color: orange },
+      needs: { word: '⚑ your turn', color: 'red' },
+      done: { word: '✓ finished', color: 'green' },
     }
     const cells = 14
     const nameW = width - 13 - cells - 12 - 6
@@ -162,12 +162,8 @@ export const register: Register = on => {
           )
         })}
         <Text>
-          <Text color={orange}>{`✱ ${tally.running} running`}</Text>
-          <Text dimColor>{'  ·  '}</Text>
-          <Text color="green">{`✓ ${tally.done} done`}</Text>
-          <Text dimColor>{'  ·  '}</Text>
-          <Text color={tally.needs ? 'red' : undefined} bold={tally.needs > 0} dimColor={!tally.needs}>{`! ${tally.needs} needs you`}</Text>
-          <Text dimColor>{'      /sessions'}</Text>
+          {tally.needs > 0 && <Text color="red" bold>{`⚑ ${tally.needs} waiting on you  `}</Text>}
+          <Text dimColor>{`${tally.running} working · ${tally.done} finished · /sessions to list them`}</Text>
         </Text>
       </Box>
     )

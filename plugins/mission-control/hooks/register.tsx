@@ -235,7 +235,7 @@ export const register: Register = on => {
             </Text>
           )}
           <Text>
-            <Text bold color={waiting ? amber : undefined}>{waiting ? '? NEEDS YOU ' : 'NOW '}</Text>
+            <Text bold color={waiting ? amber : undefined}>{waiting ? '⚑ YOUR OK ' : 'NOW '}</Text>
             <Text color={waiting ? amber : m.running ? accent : undefined}>{short(waiting ? `allow ${waiting}` : m.feed[0] ?? (m.running ? 'Thinking…' : 'idle'), width - 28)}</Text>
             {m.asks.length > 0 && <Text dimColor>{`  ASKS ${m.asks.filter(a => a.done).length}/${m.asks.length} ✓`}</Text>}
             {m.running && <Text dimColor>{`  ${clock(m.nowMs - m.startedMs)}`}</Text>}
@@ -258,7 +258,7 @@ export const register: Register = on => {
     return (
       <Box flexDirection="column" borderStyle="round" borderColor={waiting ? amber : m.running ? accent : 'green'} paddingX={1} width={width}>
         <Box flexDirection="row" justifyContent="space-between">
-          <Text bold color={waiting ? amber : accent}>{waiting ? '? MISSION CONTROL · NEEDS YOU' : '◆ MISSION CONTROL'}</Text>
+          <Text bold color={waiting ? amber : accent}>{waiting ? '⚑ MISSION CONTROL · YOUR OK' : '◆ MISSION CONTROL'}</Text>
           <Text dimColor>{m.running ? `working · ${clock(m.nowMs - m.startedMs)}` : 'finished'}</Text>
         </Box>
         <Text>
@@ -273,9 +273,9 @@ export const register: Register = on => {
           </Text>
         ))}
         <Box marginTop={1} flexDirection="row">
-          <Text bold color={waiting ? amber : undefined}>{waiting ? '?    ' : 'NOW  '}</Text>
+          <Text bold color={waiting ? amber : undefined}>{waiting ? '⚑    ' : 'NOW  '}</Text>
           <Text color={waiting ? amber : m.running ? accent : undefined}>
-            {waiting ? short(`Waiting for you: allow ${waiting}`, width - 12) : m.feed[0] ? short(m.feed[0], width - 12) : m.running ? 'Thinking…' : 'All done'}
+            {waiting ? short(`Claude is waiting for your OK to ${waiting.charAt(0).toLowerCase()}${waiting.slice(1)}`, width - 12) : m.feed[0] ? short(m.feed[0], width - 12) : m.running ? 'Thinking…' : 'All done'}
           </Text>
         </Box>
         {shownAsks.length > 0 && (

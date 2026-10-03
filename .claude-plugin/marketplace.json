@@ -18,7 +18,7 @@
       "name": "mission-control",
       "source": "./plugins/mission-control",
       "description": "A live panel above your prompt: the plan as a stage bar, what Claude is doing in plain English, your asks ticked off, and a chime when it is done",
-      "version": "0.1.2"
+      "version": "0.1.3"
     },
     {
       "name": "mod-maker",
