@@ -35,8 +35,8 @@
     {
       "name": "secrets-guard",
       "source": "./plugins/secrets-guard",
-      "description": "Stops Claude reading .env and key files, and masks API keys in command output",
-      "version": "0.1.0"
+      "description": "Stops Claude reading .env and key files, masks API keys in command output, and lets you hand Claude a key through a pane without it ever seeing the value",
+      "version": "0.1.2"
     },
     {
       "name": "open-loops",
@@ -54,7 +54,7 @@
       "name": "sessions-band",
       "source": "./plugins/sessions-band",
       "description": "A band above the prompt listing your other open sessions, with an Ask button",
-      "version": "0.1.1"
+      "version": "0.1.2"
     },
     {
       "name": "pre-build-check",
